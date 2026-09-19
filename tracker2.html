@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet Balance & Expense Tracker</title>
+    <!-- Supabase JS Client CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 40px 16px;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        .wrapper {
+            display: flex;
+            gap: 24px;
+            width: 100%;
+            max-width: 960px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .card {
+            background: #1e293b;
+            flex: 1 1 440px;
+            max-width: 460px;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Progress & Stats */
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #94a3b8;
+        }
+
+        .primary-val {
+            font-size: 26px;
+            font-weight: 700;
+            color: #f8fafc;
+            margin-top: 4px;
+        }
+
+        .sub-metric {
+            font-size: 12px;
+            color: #38bdf8;
+            font-weight: 500;
+            margin-top: 2px;
+        }
+
+        .method-breakdown {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            color: #cbd5e1;
+            margin-top: 4px;
+            font-weight: 600;
+        }
+
+        .method-val {
+            color: #f8fafc;
+        }
+
+        .bar-track {
+            background: #334155;
+            height: 10px;
+            border-radius: 999px;
+            overflow: hidden;
+            margin: 14px 0 20px;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 0.35s ease, background-color 0.35s ease;
+        }
+
+        /* Segmented Breakdown Bar */
+        .breakdown-bar {
+            display: flex;
+            height: 10px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: #334155;
+            margin: 14px 0 16px;
+            width: 100%;
+        }
+
+        .breakdown-segment {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .seg-food { background-color: #ef4444; }
+        .seg-transport { background-color: #3b82f6; }
+        .seg-bills { background-color: #f59e0b; }
+        .seg-leisure { background-color: #a855f7; }
+        .seg-shopping { background-color: #10b981; }
+        .seg-other { background-color: #64748b; }
+
+        /* Time Period Filters */
+        .filter-bar {
+            display: flex;
+            gap: 6px;
+            background: #0f172a;
+            padding: 4px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            border: 1px solid #334155;
+        }
+
+        .filter-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            padding: 6px 0;
+            border-radius: 7px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-btn:hover {
+            color: #f8fafc;
+        }
+
+        .filter-btn.active {
+            background: #1e293b;
+            color: #38bdf8;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* Forms & Inputs */
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        input {
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #fff;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s ease;
+            width: 100%;
+        }
+
+        input:focus {
+            border-color: #3b82f6;
+        }
+
+        input[type="text"] { flex: 2; }
+        input[type="number"] { flex: 1; }
+
+        .chip-group-label {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-bottom: 2px;
+            font-weight: 600;
+        }
+
+        .chips-container {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .chip-btn {
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #94a3b8;
+            padding: 5px 9px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .chip-btn:hover {
+            border-color: #64748b;
+            color: #f8fafc;
+        }
+
+        .chip-btn.active {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #fff;
+        }
+
+        .chip-btn.method-chip.active {
+            background: #0284c7;
+            border-color: #0284c7;
+            color: #fff;
+        }
+
+        /* Badges */
+        .cat-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-right: 4px;
+            text-transform: capitalize;
+        }
+
+        .method-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-right: 6px;
+            background: rgba(148, 163, 184, 0.15);
+            color: #cbd5e1;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s ease, transform 0.1s ease;
+        }
+
+        .method-badge:hover {
+            background: rgba(56, 189, 248, 0.25);
+            color: #38bdf8;
+            transform: scale(1.05);
+        }
+
+        .cat-food { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        .cat-transport { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .cat-bills { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .cat-leisure { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
+        .cat-shopping { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .cat-other { background: rgba(100, 116, 139, 0.2); color: #94a3b8; }
+        .cat-inflow { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+
+        .submit-btn {
+            width: 100%;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            padding: 11px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+        .submit-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .submit-btn:active {
+            transform: scale(0.99);
+        }
+
+        .submit-btn-green {
+            background: #059669;
+        }
+
+        .submit-btn-green:hover {
+            background: #047857;
+        }
+
+        /* Editing Banner */
+        .editing-mode-bar {
+            display: none;
+            background: #f59e0b;
+            color: #0f172a;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .cancel-edit-btn {
+            background: #1e293b;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 2px 6px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        /* Scrollable List Container */
+        .list-container {
+            max-height: 295px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        /* Rows */
+        .date-group { margin-bottom: 16px; }
+
+        .date-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 700;
+            color: #38bdf8;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 4px;
+            margin-bottom: 6px;
+        }
+
+        .date-subtotal { color: #94a3b8; font-weight: 500; }
+
+        .expense-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+            position: relative;
+        }
+
+        .expense-left {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 2px;
+        }
+
+        .expense-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .expense-amount {
+            color: #f87171;
+            font-weight: 600;
+        }
+
+        .inflow-amount {
+            color: #34d399;
+            font-weight: 600;
+        }
+
+        /* 3-Dots Dropdown Menu */
+        .action-menu-wrap {
+            position: relative;
+        }
+
+        .dots-btn {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            line-height: 1;
+            transition: color 0.15s ease, background 0.15s ease;
+        }
+
+        .dots-btn:hover {
+            color: #f8fafc;
+            background: #334155;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 24px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+            z-index: 50;
+            width: 100px;
+            overflow: hidden;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 7px 10px;
+            font-size: 12px;
+            background: transparent;
+            border: none;
+            color: #f8fafc;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .dropdown-item:hover {
+            background: #1e293b;
+        }
+
+        .dropdown-item.delete {
+            color: #ef4444;
+        }
+
+        .status-safe { color: #10b981; }
+        .status-warn { color: #f59e0b; }
+        .status-over { color: #ef4444; font-weight: 700; }
+
+        /* Footer Utilities */
+        .card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .action-btn {
+            flex: 1;
+            background: transparent;
+            border: 1px solid #475569;
+            color: #94a3b8;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:hover { background: #334155; color: #f8fafc; }
+        .action-btn.export:hover { border-color: #38bdf8; color: #38bdf8; }
+    </style>
+</head>
+
+<body>
+
+    <div class="wrapper">
+
+        <!-- CARD 1: WALLET & INFLOW TRACKER -->
+        <div class="card">
+            <div class="stats">
+                <span>Total Liquid Balance</span>
+                <span id="runway-stat">0 days runway</span>
+            </div>
+            <div class="primary-val" id="wallet-balance-val">0 UZS</div>
+            
+            <div class="method-breakdown" id="wallet-method-breakdown">
+                <span>💵 Cash: <span class="method-val" id="balance-cash-val">0 UZS</span></span>
+                <span>•</span>
+                <span>💳 Card: <span class="method-val" id="balance-card-val">0 UZS</span></span>
+            </div>
+
+            <div class="sub-metric" id="wallet-inflow-summary" style="margin-top: 4px;">Received: 0 UZS • Spent: 0 UZS</div>
+
+            <div class="bar-track">
+                <div class="bar-fill" id="wallet-bar" style="width: 100%; background-color: #10b981;"></div>
+            </div>
+
+            <form id="inflow-form">
+                <div class="input-row">
+                    <input type="text" id="inflow-source" placeholder="Source (e.g. Parents, Salary)" required>
+                    <input type="number" id="inflow-amount" placeholder="+ UZS" min="1000" required>
+                </div>
+                <div class="input-row">
+                    <input type="text" id="inflow-date" placeholder="Date: dd.mm.yyyy (optional for past days)" maxlength="10" autocomplete="off">
+                </div>
+
+                <div>
+                    <span class="chip-group-label">Deposit to:</span>
+                    <div class="chips-container" id="inflow-method-chips">
+                        <button type="button" class="chip-btn method-chip" data-method="cash">💵 Cash</button>
+                        <button type="button" class="chip-btn method-chip active" data-method="card">💳 Card</button>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn submit-btn-green" id="inflow-submit-btn">+ Log Received Money</button>
+            </form>
+
+            <div class="list-container" id="inflow-container"></div>
+
+            <div class="card-actions">
+                <button type="button" class="action-btn" id="clear-inflows-btn">Clear Inflows</button>
+            </div>
+        </div>
+
+        <!-- CARD 2: TOTAL EXPENSES TRACKER -->
+        <div class="card">
+            <div class="stats">
+                <span id="stat-period-label">This Week</span>
+                <span id="expense-count">0 items</span>
+            </div>
+            <div class="primary-val" id="expense-val">0 UZS</div>
+
+            <div class="method-breakdown" id="expense-method-breakdown">
+                <span>💵 Cash: <span class="method-val" id="spent-cash-val">0 UZS</span></span>
+                <span>•</span>
+                <span>💳 Card: <span class="method-val" id="spent-card-val">0 UZS</span></span>
+            </div>
+
+            <div class="sub-metric" id="expense-burn-rate" style="margin-top: 4px;">~0 UZS / day</div>
+
+            <div class="breakdown-bar" id="expense-breakdown-bar"></div>
+
+            <div class="filter-bar" id="expense-filters">
+                <button type="button" class="filter-btn active" data-filter="week">This Week</button>
+                <button type="button" class="filter-btn" data-filter="month">This Month</button>
+                <button type="button" class="filter-btn" data-filter="all">All Time</button>
+            </div>
+
+            <div class="editing-mode-bar" id="expense-edit-banner">
+                <span>Editing Expense</span>
+                <button type="button" class="cancel-edit-btn" id="cancel-edit-btn">Cancel</button>
+            </div>
+
+            <form id="expense-form">
+                <div class="input-row">
+                    <input type="text" id="expense-desc" placeholder="Expense (e.g. Taxi, Lunch)" required>
+                    <input type="number" id="expense-amount" placeholder="UZS" min="1" required>
+                </div>
+                <div class="input-row">
+                    <input type="text" id="expense-date" placeholder="Date: dd.mm.yyyy (optional for past days)" maxlength="10" autocomplete="off">
+                </div>
+
+                <div>
+                    <span class="chip-group-label">Paid with:</span>
+                    <div class="chips-container" id="expense-method-chips">
+                        <button type="button" class="chip-btn method-chip" data-method="cash">💵 Cash</button>
+                        <button type="button" class="chip-btn method-chip active" data-method="card">💳 Card</button>
+                    </div>
+                </div>
+
+                <div style="margin-top: 4px;">
+                    <span class="chip-group-label">Category:</span>
+                    <div class="chips-container" id="expense-category-chips">
+                        <button type="button" class="chip-btn active" data-cat="food">🍔 Food</button>
+                        <button type="button" class="chip-btn" data-cat="transport">🚕 Transport</button>
+                        <button type="button" class="chip-btn" data-cat="bills">📄 Bills</button>
+                        <button type="button" class="chip-btn" data-cat="leisure">🎬 Leisure</button>
+                        <button type="button" class="chip-btn" data-cat="shopping">🛍️ Shopping</button>
+                        <button type="button" class="chip-btn" data-cat="other">📦 Other</button>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn" id="expense-submit-btn">+ Add Expense</button>
+            </form>
+
+            <div class="list-container" id="expense-container"></div>
+
+            <div class="card-actions">
+                <button type="button" class="action-btn export" id="export-csv-btn">📥 Export CSV</button>
+                <button type="button" class="action-btn" id="clear-all-expenses">Clear Expenses</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ---------------- SUPABASE CONFIGURATION ----------------
+        const SUPABASE_URL = 'https://brxkvouelrmevypuvmqj.supabase.co';
+        // PASTE YOUR COPIED ANON KEY BETWEEN THE QUOTES BELOW:
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyeGt2b3VlbHJtZXZ5cHV2bXFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4MjM2NDQsImV4cCI6MjEwNTM5OTY0NH0.RX1iw5XOoOScv__7ACGYY8WnnVr3QCS27T14gvfnJJQ';
+
+        const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let expenses = [];
+        let inflows = [];
+        
+        let selectedCategory = 'food';
+        let selectedExpenseMethod = 'card';
+        let selectedInflowMethod = 'card';
+        let currentFilter = 'week';
+        let editingExpenseId = null;
+
+        function formatNumber(num) {
+            return Math.round(num || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+        }
+
+        function getLocalDateKey(d) {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function getDayLabel(dateObj) {
+            const weekday = dateObj.toLocaleDateString('en-GB', { weekday: 'long' });
+            const capitalizedWeekday = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+            const dateFormatted = dateObj.toLocaleDateString('ru-RU');
+            return `${capitalizedWeekday}, ${dateFormatted}`;
+        }
+
+        function formatDateMask(d) {
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            return `${day}.${month}.${d.getFullYear()}`;
+        }
+
+        function setupDateInput(elem) {
+            elem.addEventListener('input', (e) => {
+                let v = e.target.value.replace(/\D/g, '').slice(0, 8);
+                if (v.length >= 5) {
+                    e.target.value = `${v.slice(0, 2)}.${v.slice(2, 4)}.${v.slice(4)}`;
+                } else if (v.length >= 3) {
+                    e.target.value = `${v.slice(0, 2)}.${v.slice(2)}`;
+                } else {
+                    e.target.value = v;
+                }
+            });
+        }
+        setupDateInput(document.getElementById('inflow-date'));
+        setupDateInput(document.getElementById('expense-date'));
+
+        // Category Tags
+        document.querySelectorAll('#expense-category-chips .chip-btn').forEach(btn => {
+            btn.addEventListener('click', () => setExpenseCategory(btn.dataset.cat));
+        });
+
+        function setExpenseCategory(cat) {
+            selectedCategory = cat;
+            document.querySelectorAll('#expense-category-chips .chip-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.cat === cat);
+            });
+        }
+
+        // Method Selectors
+        document.querySelectorAll('#expense-method-chips .chip-btn').forEach(btn => {
+            btn.addEventListener('click', () => setExpenseMethod(btn.dataset.method));
+        });
+
+        function setExpenseMethod(method) {
+            selectedExpenseMethod = method;
+            document.querySelectorAll('#expense-method-chips .chip-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.method === method);
+            });
+        }
+
+        document.querySelectorAll('#inflow-method-chips .chip-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#inflow-method-chips .chip-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedInflowMethod = btn.dataset.method;
+            });
+        });
+
+        // Filter Selection
+        document.querySelectorAll('#expense-filters .filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#expense-filters .filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                renderDashboard();
+            });
+        });
+
+        function getFilteredExpenses() {
+            const now = new Date();
+            return expenses.filter(item => {
+                const itemDate = new Date(Number(item.date));
+                if (currentFilter === 'week') {
+                    const dayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1;
+                    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek, 0, 0, 0);
+                    return itemDate >= startOfWeek;
+                } else if (currentFilter === 'month') {
+                    return itemDate.getMonth() === now.getMonth() && itemDate.getFullYear() === now.getFullYear();
+                }
+                return true;
+            });
+        }
+
+        // ---------------- ASYNC DATA SYNC ----------------
+        async function loadData() {
+            const { data: expData, error: expErr } = await client
+                .from('expenses')
+                .select('*')
+                .order('date', { ascending: false });
+
+            const { data: infData, error: infErr } = await client
+                .from('inflows')
+                .select('*')
+                .order('date', { ascending: false });
+
+            if (expErr) console.error('Error fetching expenses:', expErr);
+            else expenses = expData || [];
+
+            if (infErr) console.error('Error fetching inflows:', infErr);
+            else inflows = infData || [];
+
+            renderDashboard();
+        }
+
+        function subscribeToRealtime() {
+            client.channel('any-db-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => loadData())
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'inflows' }, () => loadData())
+                .subscribe();
+        }
+
+        // ---------------- RENDER FUNCTIONS ----------------
+        function renderWallet(filteredExpenses) {
+            const container = document.getElementById('inflow-container');
+            container.innerHTML = '';
+
+            let inflowCash = 0, inflowCard = 0;
+            inflows.forEach(item => {
+                const m = item.method || 'card';
+                if (m === 'cash') inflowCash += Number(item.amount || 0);
+                else inflowCard += Number(item.amount || 0);
+            });
+
+            let spentCashAll = 0, spentCardAll = 0;
+            expenses.forEach(item => {
+                const m = item.method || 'card';
+                if (m === 'cash') spentCashAll += Number(item.amount || 0);
+                else spentCardAll += Number(item.amount || 0);
+            });
+
+            const totalReceived = inflowCash + inflowCard;
+            const totalSpentAllTime = spentCashAll + spentCardAll;
+            const currentBalance = totalReceived - totalSpentAllTime;
+
+            const cashBalance = inflowCash - spentCashAll;
+            const cardBalance = inflowCard - spentCardAll;
+
+            const balanceElem = document.getElementById('wallet-balance-val');
+            balanceElem.textContent = `${formatNumber(currentBalance)} UZS`;
+            balanceElem.style.color = currentBalance < 0 ? '#ef4444' : '#f8fafc';
+
+            document.getElementById('balance-cash-val').textContent = `${formatNumber(cashBalance)} UZS`;
+            document.getElementById('balance-card-val').textContent = `${formatNumber(cardBalance)} UZS`;
+
+            document.getElementById('wallet-inflow-summary').textContent = `Received: ${formatNumber(totalReceived)} UZS • Spent: ${formatNumber(totalSpentAllTime)} UZS`;
+
+            const filterSpent = filteredExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+            const activeDaysCount = new Set(filteredExpenses.map(i => getLocalDateKey(new Date(Number(i.date))))).size || 1;
+            const currentDailyAvg = filterSpent / activeDaysCount;
+
+            const runwayElem = document.getElementById('runway-stat');
+            const barFill = document.getElementById('wallet-bar');
+
+            if (currentBalance <= 0) {
+                runwayElem.textContent = 'Wallet empty';
+                runwayElem.className = 'status-over';
+                barFill.style.width = '0%';
+                barFill.style.backgroundColor = '#ef4444';
+            } else if (currentDailyAvg > 0) {
+                const daysLeft = Math.floor(currentBalance / currentDailyAvg);
+                runwayElem.textContent = `~${daysLeft} days runway left`;
+                runwayElem.className = daysLeft <= 3 ? 'status-warn' : 'status-safe';
+
+                const pct = Math.min(100, Math.max(8, (currentBalance / (totalReceived || 1)) * 100));
+                barFill.style.width = `${pct}%`;
+                barFill.style.backgroundColor = daysLeft <= 3 ? '#f59e0b' : '#10b981';
+            } else {
+                runwayElem.textContent = 'Adequately funded';
+                runwayElem.className = 'status-safe';
+                barFill.style.width = '100%';
+                barFill.style.backgroundColor = '#10b981';
+            }
+
+            if (inflows.length === 0) {
+                container.innerHTML = '<div style="color: #64748b; font-size: 13px; text-align: center; padding: 24px 0;">No deposits recorded yet. Log received money above.</div>';
+                return;
+            }
+
+            const ul = document.createElement('ul');
+            inflows.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'expense-row';
+
+                const dateStr = item.date ? new Date(Number(item.date)).toLocaleDateString('ru-RU') : '';
+                const methodLabel = (item.method || 'card') === 'cash' ? '💵 Cash' : '💳 Card';
+
+                li.innerHTML = `
+                    <div class="expense-left">
+                        <span class="cat-badge cat-inflow">Inflow</span>
+                        <span class="method-badge" onclick="toggleInflowMethod(${item.id}, '${item.method || 'card'}')" title="Toggle Cash/Card">${methodLabel}</span>
+                        <span>${item.source} ${dateStr ? `<span style="color: #64748b; font-size: 11px;">(${dateStr})</span>` : ''}</span>
+                    </div>
+                    <div class="expense-right">
+                        <span class="inflow-amount">+${formatNumber(item.amount)} UZS</span>
+                        <button class="dots-btn" onclick="deleteInflow(${item.id})" title="Delete entry">&times;</button>
+                    </div>
+                `;
+                ul.appendChild(li);
+            });
+            container.appendChild(ul);
+        }
+
+        window.toggleInflowMethod = async (id, currentMethod) => {
+            const nextMethod = currentMethod === 'cash' ? 'card' : 'cash';
+            await client.from('inflows').update({ method: nextMethod }).eq('id', id);
+            await loadData();
+        };
+
+        window.deleteInflow = async (id) => {
+            await client.from('inflows').delete().eq('id', id);
+            await loadData();
+        };
+
+        document.getElementById('inflow-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const source = document.getElementById('inflow-source');
+            const amt = document.getElementById('inflow-amount');
+            const customDate = document.getElementById('inflow-date').value.trim();
+
+            let targetDateObj = new Date();
+            if (customDate && customDate.length === 10) {
+                const [d, m, y] = customDate.split('.');
+                const parsed = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10), 12, 0, 0);
+                if (!isNaN(parsed.getTime())) targetDateObj = parsed;
+            }
+
+            await client.from('inflows').insert([{
+                source: source.value.trim(),
+                amount: parseFloat(amt.value),
+                method: selectedInflowMethod,
+                date: targetDateObj.getTime()
+            }]);
+
+            source.value = '';
+            amt.value = '';
+            document.getElementById('inflow-date').value = '';
+            await loadData();
+        });
+
+        document.getElementById('clear-inflows-btn').addEventListener('click', async () => {
+            if (confirm('Clear all received money history?')) {
+                await client.from('inflows').delete().neq('id', 0);
+                await loadData();
+            }
+        });
+
+        function renderExpenses(filteredExpenses) {
+            const container = document.getElementById('expense-container');
+            const totalSpent = filteredExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+            let spentCashFiltered = 0, spentCardFiltered = 0;
+            filteredExpenses.forEach(item => {
+                const m = item.method || 'card';
+                if (m === 'cash') spentCashFiltered += Number(item.amount || 0);
+                else spentCardFiltered += Number(item.amount || 0);
+            });
+
+            document.getElementById('expense-val').textContent = `${formatNumber(totalSpent)} UZS`;
+            document.getElementById('expense-count').textContent = `${filteredExpenses.length} ${filteredExpenses.length === 1 ? 'item' : 'items'}`;
+
+            document.getElementById('spent-cash-val').textContent = `${formatNumber(spentCashFiltered)} UZS`;
+            document.getElementById('spent-card-val').textContent = `${formatNumber(spentCardFiltered)} UZS`;
+
+            const labelMap = { week: 'This Week', month: 'This Month', all: 'All Time' };
+            document.getElementById('stat-period-label').textContent = labelMap[currentFilter];
+
+            const burnElem = document.getElementById('expense-burn-rate');
+            if (totalSpent === 0) {
+                burnElem.textContent = '~0 UZS / day';
+            } else {
+                const activeDaysCount = new Set(filteredExpenses.map(i => getLocalDateKey(new Date(Number(i.date))))).size || 1;
+                const dailyAvg = totalSpent / activeDaysCount;
+                const dayWord = activeDaysCount === 1 ? 'day' : 'days';
+                burnElem.textContent = `~${formatNumber(dailyAvg)} UZS / day (${activeDaysCount} ${dayWord} with expenses)`;
+            }
+
+            const breakdownBar = document.getElementById('expense-breakdown-bar');
+            breakdownBar.innerHTML = '';
+
+            if (totalSpent > 0) {
+                const catTotals = {};
+                filteredExpenses.forEach(item => {
+                    const cat = item.category || 'other';
+                    catTotals[cat] = (catTotals[cat] || 0) + Number(item.amount || 0);
+                });
+
+                for (const [cat, sum] of Object.entries(catTotals)) {
+                    const pct = ((sum / totalSpent) * 100).toFixed(1);
+                    if (pct > 0) {
+                        const seg = document.createElement('div');
+                        seg.className = `breakdown-segment seg-${cat}`;
+                        seg.style.width = `${pct}%`;
+                        seg.title = `${cat.toUpperCase()}: ${pct}% (${formatNumber(sum)} UZS)`;
+                        breakdownBar.appendChild(seg);
+                    }
+                }
+            }
+
+            const grouped = {};
+            filteredExpenses.forEach(item => {
+                const dateObj = new Date(Number(item.date));
+                const dayKey = getLocalDateKey(dateObj);
+                if (!grouped[dayKey]) grouped[dayKey] = { dateObj: dateObj, items: [] };
+                grouped[dayKey].items.push(item);
+            });
+
+            container.innerHTML = '';
+            const sortedDays = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+
+            sortedDays.forEach(dayKey => {
+                const group = grouped[dayKey];
+                const dayTotal = group.items.reduce((sum, item) => sum + Number(item.amount), 0);
+
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'date-group';
+
+                const header = document.createElement('div');
+                header.className = 'date-header';
+                header.innerHTML = `
+                    <span>${getDayLabel(group.dateObj)}</span>
+                    <span class="date-subtotal">-${formatNumber(dayTotal)} UZS</span>
+                `;
+                groupDiv.appendChild(header);
+
+                const ul = document.createElement('ul');
+                group.items.forEach(item => {
+                    const category = item.category || 'other';
+                    const method = item.method || 'card';
+                    const methodLabel = method === 'cash' ? '💵 Cash' : '💳 Card';
+
+                    const li = document.createElement('li');
+                    li.className = 'expense-row';
+                    li.innerHTML = `
+                        <div class="expense-left">
+                            <span class="cat-badge cat-${category}">${category}</span>
+                            <span class="method-badge" onclick="toggleExpenseMethod(${item.id}, '${method}')" title="Toggle Cash/Card">${methodLabel}</span>
+                            <span>${item.description}</span>
+                        </div>
+                        <div class="expense-right">
+                            <span class="expense-amount">-${formatNumber(item.amount)} UZS</span>
+                            <div class="action-menu-wrap">
+                                <button type="button" class="dots-btn" onclick="toggleActionMenu(event, ${item.id})">⋮</button>
+                                <div class="dropdown-menu" id="menu-${item.id}">
+                                    <button type="button" class="dropdown-item" onclick="editExpense(${item.id})">Modify</button>
+                                    <button type="button" class="dropdown-item delete" onclick="deleteExpense(${item.id})">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    ul.appendChild(li);
+                });
+
+                groupDiv.appendChild(ul);
+                container.appendChild(groupDiv);
+            });
+        }
+
+        window.toggleExpenseMethod = async (id, currentMethod) => {
+            const nextMethod = currentMethod === 'cash' ? 'card' : 'cash';
+            await client.from('expenses').update({ method: nextMethod }).eq('id', id);
+            await loadData();
+        };
+
+        window.toggleActionMenu = (e, id) => {
+            e.stopPropagation();
+            document.querySelectorAll('.dropdown-menu').forEach(m => {
+                if (m.id !== `menu-${id}`) m.classList.remove('show');
+            });
+            const menu = document.getElementById(`menu-${id}`);
+            if (menu) menu.classList.toggle('show');
+        };
+
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show'));
+        });
+
+        window.editExpense = (id) => {
+            const item = expenses.find(e => e.id === id);
+            if (!item) return;
+            editingExpenseId = id;
+
+            document.getElementById('expense-desc').value = item.description;
+            document.getElementById('expense-amount').value = item.amount;
+            document.getElementById('expense-date').value = formatDateMask(new Date(Number(item.date)));
+
+            setExpenseCategory(item.category || 'other');
+            setExpenseMethod(item.method || 'card');
+
+            document.getElementById('expense-submit-btn').textContent = 'Save Changes';
+            document.getElementById('expense-edit-banner').style.display = 'flex';
+            document.getElementById('expense-desc').focus();
+        };
+
+        document.getElementById('cancel-edit-btn').addEventListener('click', () => resetExpenseForm());
+
+        function resetExpenseForm() {
+            editingExpenseId = null;
+            document.getElementById('expense-desc').value = '';
+            document.getElementById('expense-amount').value = '';
+            document.getElementById('expense-date').value = '';
+            document.getElementById('expense-submit-btn').textContent = '+ Add Expense';
+            document.getElementById('expense-edit-banner').style.display = 'none';
+        }
+
+        window.deleteExpense = async (id) => {
+            await client.from('expenses').delete().eq('id', id);
+            if (editingExpenseId === id) resetExpenseForm();
+            await loadData();
+        };
+
+        document.getElementById('expense-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const desc = document.getElementById('expense-desc');
+            const amt = document.getElementById('expense-amount');
+            const customDate = document.getElementById('expense-date').value.trim();
+
+            let targetDateObj = new Date();
+            if (customDate && customDate.length === 10) {
+                const [d, m, y] = customDate.split('.');
+                const parsed = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10), 12, 0, 0);
+                if (!isNaN(parsed.getTime())) targetDateObj = parsed;
+            }
+
+            const payload = {
+                description: desc.value.trim(),
+                amount: parseFloat(amt.value),
+                category: selectedCategory,
+                method: selectedExpenseMethod,
+                date: targetDateObj.getTime()
+            };
+
+            if (editingExpenseId !== null) {
+                await client.from('expenses').update(payload).eq('id', editingExpenseId);
+            } else {
+                await client.from('expenses').insert([payload]);
+            }
+
+            resetExpenseForm();
+            await loadData();
+        });
+
+        // CSV Export Utility
+        document.getElementById('export-csv-btn').addEventListener('click', () => {
+            if (expenses.length === 0 && inflows.length === 0) {
+                alert('No data recorded yet to export.');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,Type,Date,Description/Source,Category,Payment Method,Amount (UZS)\r\n";
+
+            inflows.forEach(item => {
+                const d = new Date(Number(item.date || Date.now()));
+                const method = item.method || 'card';
+                csvContent += `INFLOW,${d.toLocaleDateString('ru-RU')},"${(item.source || '').replace(/"/g, '""')}",Income,${method},+${item.amount || 0}\r\n`;
+            });
+
+            expenses.forEach(item => {
+                const d = new Date(Number(item.date));
+                const method = item.method || 'card';
+                csvContent += `EXPENSE,${d.toLocaleDateString('ru-RU')},"${(item.description || '').replace(/"/g, '""')}",${item.category || 'other'},${method},-${item.amount || 0}\r\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', `Wallet_Expenses_${getLocalDateKey(new Date())}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        document.getElementById('clear-all-expenses').addEventListener('click', async () => {
+            if (confirm('Clear all accumulated expenses?')) {
+                await client.from('expenses').delete().neq('id', 0);
+                resetExpenseForm();
+                await loadData();
+            }
+        });
+
+        function renderDashboard() {
+            const filtered = getFilteredExpenses();
+            renderWallet(filtered);
+            renderExpenses(filtered);
+        }
+
+        // Initialize connection
+        loadData();
+        subscribeToRealtime();
+    </script>
+
+</body>
+
+</html>
