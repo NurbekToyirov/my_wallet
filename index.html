@@ -45,7 +45,6 @@
             flex-direction: column;
         }
 
-        /* Top Progress & Stats */
         .stats {
             display: flex;
             justify-content: space-between;
@@ -94,7 +93,6 @@
             transition: width 0.35s ease, background-color 0.35s ease;
         }
 
-        /* Segmented Breakdown Bar */
         .breakdown-bar {
             display: flex;
             height: 10px;
@@ -117,7 +115,6 @@
         .seg-shopping { background-color: #10b981; }
         .seg-other { background-color: #64748b; }
 
-        /* Time Period Filters */
         .filter-bar {
             display: flex;
             gap: 6px;
@@ -151,7 +148,6 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
-        /* Forms & Inputs */
         form {
             display: flex;
             flex-direction: column;
@@ -225,7 +221,6 @@
             color: #fff;
         }
 
-        /* Badges */
         .cat-badge {
             display: inline-block;
             padding: 2px 6px;
@@ -277,23 +272,12 @@
             transition: background-color 0.2s ease, transform 0.1s ease;
         }
 
-        .submit-btn:hover {
-            background: #1d4ed8;
-        }
+        .submit-btn:hover { background: #1d4ed8; }
+        .submit-btn:active { transform: scale(0.99); }
 
-        .submit-btn:active {
-            transform: scale(0.99);
-        }
+        .submit-btn-green { background: #059669; }
+        .submit-btn-green:hover { background: #047857; }
 
-        .submit-btn-green {
-            background: #059669;
-        }
-
-        .submit-btn-green:hover {
-            background: #047857;
-        }
-
-        /* Editing Banner */
         .editing-mode-bar {
             display: none;
             background: #f59e0b;
@@ -317,7 +301,6 @@
             font-size: 10px;
         }
 
-        /* Scrollable List Container */
         .list-container {
             max-height: 295px;
             overflow-y: auto;
@@ -330,7 +313,6 @@
             margin: 0;
         }
 
-        /* Rows */
         .date-group { margin-bottom: 16px; }
 
         .date-header {
@@ -380,7 +362,6 @@
             font-weight: 600;
         }
 
-        /* 3-Dots Dropdown Menu */
         .action-menu-wrap {
             position: relative;
         }
@@ -445,7 +426,6 @@
         .status-warn { color: #f59e0b; }
         .status-over { color: #ef4444; font-weight: 700; }
 
-        /* Footer Utilities */
         .card-actions {
             display: flex;
             gap: 8px;
@@ -523,7 +503,7 @@
         <!-- CARD 2: TOTAL EXPENSES TRACKER -->
         <div class="card">
             <div class="stats">
-                <span id="stat-period-label">This Week</span>
+                <span id="stat-period-label">All Time</span>
                 <span id="expense-count">0 items</span>
             </div>
             <div class="primary-val" id="expense-val">0 UZS</div>
@@ -539,9 +519,9 @@
             <div class="breakdown-bar" id="expense-breakdown-bar"></div>
 
             <div class="filter-bar" id="expense-filters">
-                <button type="button" class="filter-btn active" data-filter="week">This Week</button>
+                <button type="button" class="filter-btn" data-filter="week">This Week</button>
                 <button type="button" class="filter-btn" data-filter="month">This Month</button>
-                <button type="button" class="filter-btn" data-filter="all">All Time</button>
+                <button type="button" class="filter-btn active" data-filter="all">All Time</button>
             </div>
 
             <div class="editing-mode-bar" id="expense-edit-banner">
@@ -592,20 +572,24 @@
     </div>
 
     <script>
-        // ---------------- SUPABASE CONFIGURATION ----------------
         const SUPABASE_URL = 'https://brxkvouelrmevypuvmqj.supabase.co';
-        // PASTE YOUR COPIED ANON KEY BETWEEN THE QUOTES BELOW:
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyeGt2b3VlbHJtZXZ5cHV2bXFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4MjM2NDQsImV4cCI6MjEwNTM5OTY0NH0.RX1iw5XOoOScv__7ACGYY8WnnVr3QCS27T14gvfnJJQ';
 
         const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        let expenses = [];
-        let inflows = [];
-        
+        // Instant local backup loading
+        let expenses = JSON.parse(localStorage.getItem('expensesTrackerData')) || [];
+        let inflows = JSON.parse(localStorage.getItem('inflowsTrackerData')) || [];
+
+        function syncLocalStorage() {
+            localStorage.setItem('expensesTrackerData', JSON.stringify(expenses));
+            localStorage.setItem('inflowsTrackerData', JSON.stringify(inflows));
+        }
+
         let selectedCategory = 'food';
         let selectedExpenseMethod = 'card';
         let selectedInflowMethod = 'card';
-        let currentFilter = 'week';
+        let currentFilter = 'all'; // Default to "All Time" so existing records are always visible
         let editingExpenseId = null;
 
         function formatNumber(num) {
@@ -647,7 +631,6 @@
         setupDateInput(document.getElementById('inflow-date'));
         setupDateInput(document.getElementById('expense-date'));
 
-        // Category Tags
         document.querySelectorAll('#expense-category-chips .chip-btn').forEach(btn => {
             btn.addEventListener('click', () => setExpenseCategory(btn.dataset.cat));
         });
@@ -659,7 +642,6 @@
             });
         }
 
-        // Method Selectors
         document.querySelectorAll('#expense-method-chips .chip-btn').forEach(btn => {
             btn.addEventListener('click', () => setExpenseMethod(btn.dataset.method));
         });
@@ -679,7 +661,6 @@
             });
         });
 
-        // Filter Selection
         document.querySelectorAll('#expense-filters .filter-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('#expense-filters .filter-btn').forEach(b => b.classList.remove('active'));
@@ -704,24 +685,25 @@
             });
         }
 
-        // ---------------- ASYNC DATA SYNC ----------------
         async function loadData() {
-            const { data: expData, error: expErr } = await client
-                .from('expenses')
-                .select('*')
-                .order('date', { ascending: false });
+            try {
+                const { data: expData, error: expErr } = await client
+                    .from('expenses')
+                    .select('*')
+                    .order('date', { ascending: false });
 
-            const { data: infData, error: infErr } = await client
-                .from('inflows')
-                .select('*')
-                .order('date', { ascending: false });
+                const { data: infData, error: infErr } = await client
+                    .from('inflows')
+                    .select('*')
+                    .order('date', { ascending: false });
 
-            if (expErr) console.error('Error fetching expenses:', expErr);
-            else expenses = expData || [];
+                if (!expErr && expData) expenses = expData;
+                if (!infErr && infData) inflows = infData;
 
-            if (infErr) console.error('Error fetching inflows:', infErr);
-            else inflows = infData || [];
-
+                syncLocalStorage();
+            } catch (err) {
+                console.warn('Network offline or database unreachable. Using local storage copy.', err);
+            }
             renderDashboard();
         }
 
@@ -732,7 +714,6 @@
                 .subscribe();
         }
 
-        // ---------------- RENDER FUNCTIONS ----------------
         function renderWallet(filteredExpenses) {
             const container = document.getElementById('inflow-container');
             container.innerHTML = '';
@@ -825,12 +806,22 @@
 
         window.toggleInflowMethod = async (id, currentMethod) => {
             const nextMethod = currentMethod === 'cash' ? 'card' : 'cash';
-            await client.from('inflows').update({ method: nextMethod }).eq('id', id);
+            const { error } = await client.from('inflows').update({ method: nextMethod }).eq('id', id);
+            if (error) {
+                // Local fallback update
+                const target = inflows.find(i => i.id === id);
+                if (target) target.method = nextMethod;
+                syncLocalStorage();
+            }
             await loadData();
         };
 
         window.deleteInflow = async (id) => {
-            await client.from('inflows').delete().eq('id', id);
+            const { error } = await client.from('inflows').delete().eq('id', id);
+            if (error) {
+                inflows = inflows.filter(i => i.id !== id);
+                syncLocalStorage();
+            }
             await loadData();
         };
 
@@ -847,12 +838,25 @@
                 if (!isNaN(parsed.getTime())) targetDateObj = parsed;
             }
 
-            await client.from('inflows').insert([{
+            const itemPayload = {
+                id: Date.now(),
                 source: source.value.trim(),
                 amount: parseFloat(amt.value),
                 method: selectedInflowMethod,
                 date: targetDateObj.getTime()
+            };
+
+            inflows.unshift(itemPayload);
+            syncLocalStorage();
+
+            const { error } = await client.from('inflows').insert([{
+                source: itemPayload.source,
+                amount: itemPayload.amount,
+                method: itemPayload.method,
+                date: itemPayload.date
             }]);
+
+            if (error) console.error('Supabase save error:', error.message);
 
             source.value = '';
             amt.value = '';
@@ -862,6 +866,8 @@
 
         document.getElementById('clear-inflows-btn').addEventListener('click', async () => {
             if (confirm('Clear all received money history?')) {
+                inflows = [];
+                syncLocalStorage();
                 await client.from('inflows').delete().neq('id', 0);
                 await loadData();
             }
@@ -980,7 +986,12 @@
 
         window.toggleExpenseMethod = async (id, currentMethod) => {
             const nextMethod = currentMethod === 'cash' ? 'card' : 'cash';
-            await client.from('expenses').update({ method: nextMethod }).eq('id', id);
+            const { error } = await client.from('expenses').update({ method: nextMethod }).eq('id', id);
+            if (error) {
+                const target = expenses.find(e => e.id === id);
+                if (target) target.method = nextMethod;
+                syncLocalStorage();
+            }
             await loadData();
         };
 
@@ -1026,7 +1037,11 @@
         }
 
         window.deleteExpense = async (id) => {
-            await client.from('expenses').delete().eq('id', id);
+            const { error } = await client.from('expenses').delete().eq('id', id);
+            if (error) {
+                expenses = expenses.filter(e => e.id !== id);
+                syncLocalStorage();
+            }
             if (editingExpenseId === id) resetExpenseForm();
             await loadData();
         };
@@ -1053,16 +1068,22 @@
             };
 
             if (editingExpenseId !== null) {
+                const index = expenses.findIndex(e => e.id === editingExpenseId);
+                if (index !== -1) expenses[index] = { ...payload, id: editingExpenseId };
+                syncLocalStorage();
                 await client.from('expenses').update(payload).eq('id', editingExpenseId);
             } else {
-                await client.from('expenses').insert([payload]);
+                const newId = Date.now();
+                expenses.unshift({ ...payload, id: newId });
+                syncLocalStorage();
+                const { error } = await client.from('expenses').insert([payload]);
+                if (error) console.error('Supabase expense insert error:', error.message);
             }
 
             resetExpenseForm();
             await loadData();
         });
 
-        // CSV Export Utility
         document.getElementById('export-csv-btn').addEventListener('click', () => {
             if (expenses.length === 0 && inflows.length === 0) {
                 alert('No data recorded yet to export.');
@@ -1084,7 +1105,7 @@
             });
 
             const encodedUri = encodeURI(csvContent);
-            const link = document.createElement('a');
+            const link = document.createElement('link');
             link.setAttribute('href', encodedUri);
             link.setAttribute('download', `Wallet_Expenses_${getLocalDateKey(new Date())}.csv`);
             document.body.appendChild(link);
@@ -1094,6 +1115,8 @@
 
         document.getElementById('clear-all-expenses').addEventListener('click', async () => {
             if (confirm('Clear all accumulated expenses?')) {
+                expenses = [];
+                syncLocalStorage();
                 await client.from('expenses').delete().neq('id', 0);
                 resetExpenseForm();
                 await loadData();
@@ -1106,7 +1129,8 @@
             renderExpenses(filtered);
         }
 
-        // Initialize connection
+        // Run dashboard immediately from local storage cache, then update from server
+        renderDashboard();
         loadData();
         subscribeToRealtime();
     </script>
