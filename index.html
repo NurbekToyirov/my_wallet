@@ -577,19 +577,29 @@
 
         const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Instant local backup loading
-        let expenses = JSON.parse(localStorage.getItem('expensesTrackerData')) || [];
-        let inflows = JSON.parse(localStorage.getItem('inflowsTrackerData')) || [];
+        let expenses = [];
+        let inflows = [];
+
+        try {
+            expenses = JSON.parse(localStorage.getItem('expensesTrackerData')) || [];
+            inflows = JSON.parse(localStorage.getItem('inflowsTrackerData')) || [];
+        } catch (e) {
+            console.warn('LocalStorage read error:', e);
+        }
 
         function syncLocalStorage() {
-            localStorage.setItem('expensesTrackerData', JSON.stringify(expenses));
-            localStorage.setItem('inflowsTrackerData', JSON.stringify(inflows));
+            try {
+                localStorage.setItem('expensesTrackerData', JSON.stringify(expenses));
+                localStorage.setItem('inflowsTrackerData', JSON.stringify(inflows));
+            } catch (e) {
+                console.warn('LocalStorage write error:', e);
+            }
         }
 
         let selectedCategory = 'food';
         let selectedExpenseMethod = 'card';
         let selectedInflowMethod = 'card';
-        let currentFilter = 'all'; // Default to "All Time" so existing records are always visible
+        let currentFilter = 'all';
         let editingExpenseId = null;
 
         function formatNumber(num) {
@@ -617,6 +627,7 @@
         }
 
         function setupDateInput(elem) {
+            if (!elem) return;
             elem.addEventListener('input', (e) => {
                 let v = e.target.value.replace(/\D/g, '').slice(0, 8);
                 if (v.length >= 5) {
@@ -697,25 +708,30 @@
                     .select('*')
                     .order('date', { ascending: false });
 
-                if (!expErr && expData) expenses = expData;
-                if (!infErr && infData) inflows = infData;
+                if (!expErr && expData && expData.length > 0) expenses = expData;
+                if (!infErr && infData && infData.length > 0) inflows = infData;
 
                 syncLocalStorage();
             } catch (err) {
-                console.warn('Network offline or database unreachable. Using local storage copy.', err);
+                console.warn('Supabase offline or paused. Showing local storage records.', err);
             }
             renderDashboard();
         }
 
         function subscribeToRealtime() {
-            client.channel('any-db-changes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => loadData())
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'inflows' }, () => loadData())
-                .subscribe();
+            try {
+                client.channel('any-db-changes')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => loadData())
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'inflows' }, () => loadData())
+                    .subscribe();
+            } catch (e) {
+                console.warn('Realtime subscription not available:', e);
+            }
         }
 
         function renderWallet(filteredExpenses) {
             const container = document.getElementById('inflow-container');
+            if (!container) return;
             container.innerHTML = '';
 
             let inflowCash = 0, inflowCard = 0;
@@ -806,22 +822,25 @@
 
         window.toggleInflowMethod = async (id, currentMethod) => {
             const nextMethod = currentMethod === 'cash' ? 'card' : 'cash';
-            const { error } = await client.from('inflows').update({ method: nextMethod }).eq('id', id);
-            if (error) {
-                // Local fallback update
-                const target = inflows.find(i => i.id === id);
-                if (target) target.method = nextMethod;
-                syncLocalStorage();
-            }
+            const target = inflows.find(i => i.id === id);
+            if (target) target.method = nextMethod;
+            syncLocalStorage();
+            renderDashboard();
+
+            try {
+                await client.from('inflows').update({ method: nextMethod }).eq('id', id);
+            } catch (e) {}
             await loadData();
         };
 
         window.deleteInflow = async (id) => {
-            const { error } = await client.from('inflows').delete().eq('id', id);
-            if (error) {
-                inflows = inflows.filter(i => i.id !== id);
-                syncLocalStorage();
-            }
+            inflows = inflows.filter(i => i.id !== id);
+            syncLocalStorage();
+            renderDashboard();
+
+            try {
+                await client.from('inflows').delete().eq('id', id);
+            } catch (e) {}
             await loadData();
         };
 
@@ -848,19 +867,22 @@
 
             inflows.unshift(itemPayload);
             syncLocalStorage();
-
-            const { error } = await client.from('inflows').insert([{
-                source: itemPayload.source,
-                amount: itemPayload.amount,
-                method: itemPayload.method,
-                date: itemPayload.date
-            }]);
-
-            if (error) console.error('Supabase save error:', error.message);
+            renderDashboard();
 
             source.value = '';
             amt.value = '';
             document.getElementById('inflow-date').value = '';
+
+            try {
+                await client.from('inflows').insert([{
+                    source: itemPayload.source,
+                    amount: itemPayload.amount,
+                    method: itemPayload.method,
+                    date: itemPayload.date
+                }]);
+            } catch (err) {
+                console.warn('Could not sync inflow to remote server, saved locally:', err);
+            }
             await loadData();
         });
 
@@ -868,13 +890,18 @@
             if (confirm('Clear all received money history?')) {
                 inflows = [];
                 syncLocalStorage();
-                await client.from('inflows').delete().neq('id', 0);
+                renderDashboard();
+                try {
+                    await client.from('inflows').delete().neq('id', 0);
+                } catch (e) {}
                 await loadData();
             }
         });
 
         function renderExpenses(filteredExpenses) {
             const container = document.getElementById('expense-container');
+            if (!container) return;
+
             const totalSpent = filteredExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
             let spentCashFiltered = 0, spentCardFiltered = 0;
@@ -986,12 +1013,14 @@
 
         window.toggleExpenseMethod = async (id, currentMethod) => {
             const nextMethod = currentMethod === 'cash' ? 'card' : 'cash';
-            const { error } = await client.from('expenses').update({ method: nextMethod }).eq('id', id);
-            if (error) {
-                const target = expenses.find(e => e.id === id);
-                if (target) target.method = nextMethod;
-                syncLocalStorage();
-            }
+            const target = expenses.find(e => e.id === id);
+            if (target) target.method = nextMethod;
+            syncLocalStorage();
+            renderDashboard();
+
+            try {
+                await client.from('expenses').update({ method: nextMethod }).eq('id', id);
+            } catch (e) {}
             await loadData();
         };
 
@@ -1037,12 +1066,15 @@
         }
 
         window.deleteExpense = async (id) => {
-            const { error } = await client.from('expenses').delete().eq('id', id);
-            if (error) {
-                expenses = expenses.filter(e => e.id !== id);
-                syncLocalStorage();
-            }
+            expenses = expenses.filter(e => e.id !== id);
+            syncLocalStorage();
+            renderDashboard();
+
             if (editingExpenseId === id) resetExpenseForm();
+
+            try {
+                await client.from('expenses').delete().eq('id', id);
+            } catch (e) {}
             await loadData();
         };
 
@@ -1071,26 +1103,33 @@
                 const index = expenses.findIndex(e => e.id === editingExpenseId);
                 if (index !== -1) expenses[index] = { ...payload, id: editingExpenseId };
                 syncLocalStorage();
-                await client.from('expenses').update(payload).eq('id', editingExpenseId);
+                renderDashboard();
+                try {
+                    await client.from('expenses').update(payload).eq('id', editingExpenseId);
+                } catch (e) {}
             } else {
                 const newId = Date.now();
                 expenses.unshift({ ...payload, id: newId });
                 syncLocalStorage();
-                const { error } = await client.from('expenses').insert([payload]);
-                if (error) console.error('Supabase expense insert error:', error.message);
+                renderDashboard();
+                try {
+                    await client.from('expenses').insert([payload]);
+                } catch (err) {
+                    console.warn('Could not sync expense to remote server, saved locally:', err);
+                }
             }
 
             resetExpenseForm();
             await loadData();
         });
-// CSV Export Utility
+
+        // 📥 Working CSV Export Button
         document.getElementById('export-csv-btn').addEventListener('click', () => {
             if (expenses.length === 0 && inflows.length === 0) {
                 alert('No data recorded yet to export.');
                 return;
             }
 
-            // UTF-8 BOM ensures Excel and Google Sheets open Cyrillic/characters properly
             let csvContent = "\uFEFFType,Date,Description/Source,Category,Payment Method,Amount (UZS)\r\n";
 
             inflows.forEach(item => {
@@ -1107,7 +1146,7 @@
 
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); // <-- Uses <a> tag so the browser triggers a real file download
+            const a = document.createElement('a');
             a.href = url;
             a.download = `Wallet_Expenses_${getLocalDateKey(new Date())}.csv`;
             document.body.appendChild(a);
@@ -1116,27 +1155,15 @@
             URL.revokeObjectURL(url);
         });
 
-            expenses.forEach(item => {
-                const d = new Date(Number(item.date));
-                const method = item.method || 'card';
-                csvContent += `EXPENSE,${d.toLocaleDateString('ru-RU')},"${(item.description || '').replace(/"/g, '""')}",${item.category || 'other'},${method},-${item.amount || 0}\r\n`;
-            });
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement('link');
-            link.setAttribute('href', encodedUri);
-            link.setAttribute('download', `Wallet_Expenses_${getLocalDateKey(new Date())}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        });
-
         document.getElementById('clear-all-expenses').addEventListener('click', async () => {
             if (confirm('Clear all accumulated expenses?')) {
                 expenses = [];
                 syncLocalStorage();
-                await client.from('expenses').delete().neq('id', 0);
+                renderDashboard();
                 resetExpenseForm();
+                try {
+                    await client.from('expenses').delete().neq('id', 0);
+                } catch (e) {}
                 await loadData();
             }
         });
@@ -1147,7 +1174,7 @@
             renderExpenses(filtered);
         }
 
-        // Run dashboard immediately from local storage cache, then update from server
+        // Run immediately from local storage cache, then check Supabase
         renderDashboard();
         loadData();
         subscribeToRealtime();
