@@ -452,7 +452,7 @@
 <body>
 
     <div class="wrapper">
-<!-- CARD 2: TOTAL EXPENSES TRACKER -->
+        <!-- CARD 2: TOTAL EXPENSES TRACKER -->
         <div class="card">
             <div class="stats">
                 <span id="stat-period-label">All Time</span>
@@ -464,6 +464,15 @@
                 <span>💵 Cash: <span class="method-val" id="spent-cash-val">0 UZS</span></span>
                 <span>•</span>
                 <span>💳 Card: <span class="method-val" id="spent-card-val">0 UZS</span></span>
+            </div>
+            
+            <!-- MONTHLY BUDGET UI -->
+            <div class="stats" style="margin-top: 16px;">
+                <span>Monthly Budget (3,000,000 UZS)</span>
+                <span id="budget-left-val">0 UZS left</span>
+            </div>
+            <div class="bar-track" style="margin-top: 6px; margin-bottom: 20px;">
+                <div class="bar-fill" id="budget-bar" style="width: 0%; background-color: #38bdf8;"></div>
             </div>
 
             <div class="sub-metric" id="expense-burn-rate" style="margin-top: 4px;">~0 UZS / day</div>
@@ -512,12 +521,12 @@
                 </div>
 
                 <div style="margin-top: 8px; margin-bottom: 8px;">
-    <span class="chip-group-label">Value:</span>
-    <div class="chips-container" id="expense-value-chips">
-        <button type="button" class="chip-btn active" data-essential="true">✅ Essential</button>
-        <button type="button" class="chip-btn" data-essential="false">📉 Non-essential (Muda)</button>
-    </div>
-</div>
+                    <span class="chip-group-label">Value:</span>
+                    <div class="chips-container" id="expense-value-chips">
+                        <button type="button" class="chip-btn active" data-essential="true">✅ Essential</button>
+                        <button type="button" class="chip-btn" data-essential="false">📉 Non-essential (Muda)</button>
+                    </div>
+                </div>
 
                 <button type="submit" class="submit-btn" id="expense-submit-btn">+ Add Expense</button>
             </form>
@@ -674,13 +683,13 @@
 
         let isEssentialExpense = true;
 
-document.querySelectorAll('#expense-value-chips .chip-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('#expense-value-chips .chip-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        isEssentialExpense = btn.dataset.essential === 'true';
-    });
-});
+        document.querySelectorAll('#expense-value-chips .chip-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#expense-value-chips .chip-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                isEssentialExpense = btn.dataset.essential === 'true';
+            });
+        });
 
         document.querySelectorAll('#inflow-method-chips .chip-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -709,8 +718,10 @@ document.querySelectorAll('#expense-value-chips .chip-btn').forEach(btn => {
                     return itemDate >= startOfWeek;
                 } else if (currentFilter === 'month') {
                     return itemDate.getMonth() === now.getMonth() && itemDate.getFullYear() === now.getFullYear();
+                } else if (currentFilter === '30days') {
+                    const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+                    return itemDate >= thirtyDaysAgo;
                 }
-                else if (currentFilter === '30days') { ... }
                 return true;
             });
         }
@@ -772,434 +783,4 @@ document.querySelectorAll('#expense-value-chips .chip-btn').forEach(btn => {
             const currentBalance = totalReceived - totalSpentAllTime;
 
             const cashBalance = inflowCash - spentCashAll;
-            const cardBalance = inflowCard - spentCardAll;
-
-            const balanceElem = document.getElementById('wallet-balance-val');
-            balanceElem.textContent = `${formatNumber(currentBalance)} UZS`;
-            balanceElem.style.color = currentBalance < 0 ? '#ef4444' : '#f8fafc';
-
-            document.getElementById('balance-cash-val').textContent = `${formatNumber(cashBalance)} UZS`;
-            document.getElementById('balance-card-val').textContent = `${formatNumber(cardBalance)} UZS`;
-
-            document.getElementById('wallet-inflow-summary').textContent = `Received: ${formatNumber(totalReceived)} UZS • Spent: ${formatNumber(totalSpentAllTime)} UZS`;
-
-            const filterSpent = filteredExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-            const activeDaysCount = new Set(filteredExpenses.map(i => getLocalDateKey(new Date(Number(i.date))))).size || 1;
-            const currentDailyAvg = filterSpent / activeDaysCount;
-
-            const runwayElem = document.getElementById('runway-stat');
-            const barFill = document.getElementById('wallet-bar');
-
-            if (currentBalance <= 0) {
-                runwayElem.textContent = 'Wallet empty';
-                runwayElem.className = 'status-over';
-                barFill.style.width = '0%';
-                barFill.style.backgroundColor = '#ef4444';
-            } else if (currentDailyAvg > 0) {
-                const daysLeft = Math.floor(currentBalance / currentDailyAvg);
-                runwayElem.textContent = `~${daysLeft} days runway left`;
-                runwayElem.className = daysLeft <= 3 ? 'status-warn' : 'status-safe';
-
-                const pct = Math.min(100, Math.max(8, (currentBalance / (totalReceived || 1)) * 100));
-                barFill.style.width = `${pct}%`;
-                barFill.style.backgroundColor = daysLeft <= 3 ? '#f59e0b' : '#10b981';
-            } else {
-                runwayElem.textContent = 'Adequately funded';
-                runwayElem.className = 'status-safe';
-                barFill.style.width = '100%';
-                barFill.style.backgroundColor = '#10b981';
-            }
-
-            if (inflows.length === 0) {
-                container.innerHTML = '<div style="color: #64748b; font-size: 13px; text-align: center; padding: 24px 0;">No deposits recorded yet. Log received money above.</div>';
-                return;
-            }
-
-            const ul = document.createElement('ul');
-            inflows.forEach(item => {
-                const li = document.createElement('li');
-                li.className = 'expense-row';
-
-                const dateStr = item.date ? new Date(Number(item.date)).toLocaleDateString('ru-RU') : '';
-                const methodLabel = (item.method || 'card') === 'cash' ? '💵 Cash' : '💳 Card';
-
-                li.innerHTML = `
-                    <div class="expense-left">
-                        <span class="cat-badge cat-inflow">Inflow</span>
-                        <span class="method-badge" onclick="toggleInflowMethod(${item.id}, '${item.method || 'card'}')" title="Toggle Cash/Card">${methodLabel}</span>
-                        <span>${item.source} ${dateStr ? `<span style="color: #64748b; font-size: 11px;">(${dateStr})</span>` : ''}</span>
-                    </div>
-                    <div class="expense-right">
-                        <span class="inflow-amount">+${formatNumber(item.amount)} UZS</span>
-                        <button class="dots-btn" onclick="deleteInflow(${item.id})" title="Delete entry">&times;</button>
-                    </div>
-                `;
-                ul.appendChild(li);
-            });
-            container.appendChild(ul);
-        }
-
-        window.toggleInflowMethod = async (id, currentMethod) => {
-            const nextMethod = currentMethod === 'cash' ? 'card' : 'cash';
-            const target = inflows.find(i => i.id === id);
-            if (target) target.method = nextMethod;
-            syncLocalStorage();
-            renderDashboard();
-
-            try {
-                await client.from('inflows').update({ method: nextMethod }).eq('id', id);
-            } catch (e) {}
-            await loadData();
-        };
-
-        window.deleteInflow = async (id) => {
-            inflows = inflows.filter(i => i.id !== id);
-            syncLocalStorage();
-            renderDashboard();
-
-            try {
-                await client.from('inflows').delete().eq('id', id);
-            } catch (e) {}
-            await loadData();
-        };
-
-        document.getElementById('inflow-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const source = document.getElementById('inflow-source');
-            const amt = document.getElementById('inflow-amount');
-            const customDate = document.getElementById('inflow-date').value.trim();
-
-            let targetDateObj = new Date();
-            if (customDate && customDate.length === 10) {
-                const [d, m, y] = customDate.split('.');
-                const parsed = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10), 12, 0, 0);
-                if (!isNaN(parsed.getTime())) targetDateObj = parsed;
-            }
-
-            const itemPayload = {
-                id: Date.now(),
-                source: source.value.trim(),
-                amount: parseFloat(amt.value),
-                method: selectedInflowMethod,
-                date: targetDateObj.getTime()
-            };
-
-            inflows.unshift(itemPayload);
-            syncLocalStorage();
-            renderDashboard();
-
-            source.value = '';
-            amt.value = '';
-            document.getElementById('inflow-date').value = '';
-
-            try {
-                await client.from('inflows').insert([{
-                    source: itemPayload.source,
-                    amount: itemPayload.amount,
-                    method: itemPayload.method,
-                    date: itemPayload.date
-                }]);
-            } catch (err) {
-                console.warn('Could not sync inflow to remote server, saved locally:', err);
-            }
-            await loadData();
-        });
-
-        document.getElementById('clear-inflows-btn').addEventListener('click', async () => {
-            if (confirm('Clear all received money history?')) {
-                inflows = [];
-                syncLocalStorage();
-                renderDashboard();
-                try {
-                    await client.from('inflows').delete().neq('id', 0);
-                } catch (e) {}
-                await loadData();
-            }
-        });
-
-        function renderExpenses(filteredExpenses) {
-            const container = document.getElementById('expense-container');
-            if (!container) return;
-
-            const totalSpent = filteredExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-
-            let spentCashFiltered = 0, spentCardFiltered = 0;
-            filteredExpenses.forEach(item => {
-                const m = item.method || 'card';
-                if (m === 'cash') spentCashFiltered += Number(item.amount || 0);
-                else spentCardFiltered += Number(item.amount || 0);
-            });
-
-            document.getElementById('expense-val').textContent = `${formatNumber(totalSpent)} UZS`;
-            document.getElementById('expense-count').textContent = `${filteredExpenses.length} ${filteredExpenses.length === 1 ? 'item' : 'items'}`;
-
-            document.getElementById('spent-cash-val').textContent = `${formatNumber(spentCashFiltered)} UZS`;
-            document.getElementById('spent-card-val').textContent = `${formatNumber(spentCardFiltered)} UZS`;
-
-            const labelMap = { week: 'This Week', month: 'This Month', '30days': 'Last 30 Days', all: 'All Time' };
-
-            const burnElem = document.getElementById('expense-burn-rate');
-            if (totalSpent === 0) {
-                burnElem.textContent = '~0 UZS / day';
-            } else {
-                const activeDaysCount = new Set(filteredExpenses.map(i => getLocalDateKey(new Date(Number(i.date))))).size || 1;
-                const dailyAvg = totalSpent / activeDaysCount;
-                const dayWord = activeDaysCount === 1 ? 'day' : 'days';
-                burnElem.textContent = `~${formatNumber(dailyAvg)} UZS / day (${activeDaysCount} ${dayWord} with expenses)`;
-            }
-
-            const breakdownBar = document.getElementById('expense-breakdown-bar');
-            breakdownBar.innerHTML = '';
-
-            if (totalSpent > 0) {
-                const catTotals = {};
-                filteredExpenses.forEach(item => {
-                    const cat = item.category || 'other';
-                    catTotals[cat] = (catTotals[cat] || 0) + Number(item.amount || 0);
-                });
-
-                for (const [cat, sum] of Object.entries(catTotals)) {
-                    const pct = ((sum / totalSpent) * 100).toFixed(1);
-                    if (pct > 0) {
-                        const seg = document.createElement('div');
-                        seg.className = `breakdown-segment seg-${cat}`;
-                        seg.style.width = `${pct}%`;
-                        seg.title = `${cat.toUpperCase()}: ${pct}% (${formatNumber(sum)} UZS)`;
-                        breakdownBar.appendChild(seg);
-                    }
-                }
-            }
-
-            const grouped = {};
-            filteredExpenses.forEach(item => {
-                const dateObj = new Date(Number(item.date));
-                const dayKey = getLocalDateKey(dateObj);
-                if (!grouped[dayKey]) grouped[dayKey] = { dateObj: dateObj, items: [] };
-                grouped[dayKey].items.push(item);
-            });
-
-            container.innerHTML = '';
-            const sortedDays = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
-
-            sortedDays.forEach(dayKey => {
-                const group = grouped[dayKey];
-                const dayTotal = group.items.reduce((sum, item) => sum + Number(item.amount), 0);
-
-                const groupDiv = document.createElement('div');
-                groupDiv.className = 'date-group';
-
-                const header = document.createElement('div');
-                header.className = 'date-header';
-                header.innerHTML = `
-                    <span>${getDayLabel(group.dateObj)}</span>
-                    <span class="date-subtotal">-${formatNumber(dayTotal)} UZS</span>
-                `;
-                groupDiv.appendChild(header);
-
-                const ul = document.createElement('ul');
-                group.items.forEach(item => {
-                    const category = item.category || 'other';
-                    const method = item.method || 'card';
-                    const methodLabel = method === 'cash' ? '💵 Cash' : '💳 Card';
-
-                    const li = document.createElement('li');
-                    li.className = 'expense-row';
-                    li.innerHTML = `
-                        <div class="expense-left">
-                            <span class="cat-badge cat-${category}">${category}</span>
-                            <span class="method-badge" onclick="toggleExpenseMethod(${item.id}, '${method}')" title="Toggle Cash/Card">${methodLabel}</span>
-                            <span>${item.description}</span>
-                        </div>
-                        <div class="expense-right">
-                            <span class="expense-amount">-${formatNumber(item.amount)} UZS</span>
-                            <div class="action-menu-wrap">
-                                <button type="button" class="dots-btn" onclick="toggleActionMenu(event, ${item.id})">⋮</button>
-                                <div class="dropdown-menu" id="menu-${item.id}">
-                                    <button type="button" class="dropdown-item" onclick="editExpense(${item.id})">Modify</button>
-                                    <button type="button" class="dropdown-item delete" onclick="deleteExpense(${item.id})">Remove</button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    ul.appendChild(li);
-                });
-
-                groupDiv.appendChild(ul);
-                container.appendChild(groupDiv);
-            });
-        }
-
-        window.toggleExpenseMethod = async (id, currentMethod) => {
-            const nextMethod = currentMethod === 'cash' ? 'card' : 'cash';
-            const target = expenses.find(e => e.id === id);
-            if (target) target.method = nextMethod;
-            syncLocalStorage();
-            renderDashboard();
-
-            try {
-                await client.from('expenses').update({ method: nextMethod }).eq('id', id);
-            } catch (e) {}
-            await loadData();
-        };
-
-        window.toggleActionMenu = (e, id) => {
-            e.stopPropagation();
-            document.querySelectorAll('.dropdown-menu').forEach(m => {
-                if (m.id !== `menu-${id}`) m.classList.remove('show');
-            });
-            const menu = document.getElementById(`menu-${id}`);
-            if (menu) menu.classList.toggle('show');
-        };
-
-        document.addEventListener('click', () => {
-            document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show'));
-        });
-
-        window.editExpense = (id) => {
-            const item = expenses.find(e => e.id === id);
-            if (!item) return;
-            editingExpenseId = id;
-
-            document.getElementById('expense-desc').value = item.description;
-            document.getElementById('expense-amount').value = item.amount;
-            document.getElementById('expense-date').value = formatDateMask(new Date(Number(item.date)));
-
-            setExpenseCategory(item.category || 'other');
-            setExpenseMethod(item.method || 'card');
-
-            document.getElementById('expense-submit-btn').textContent = 'Save Changes';
-            document.getElementById('expense-edit-banner').style.display = 'flex';
-            document.getElementById('expense-desc').focus();
-        };
-
-        document.getElementById('cancel-edit-btn').addEventListener('click', () => resetExpenseForm());
-
-        function resetExpenseForm() {
-            editingExpenseId = null;
-            document.getElementById('expense-desc').value = '';
-            document.getElementById('expense-amount').value = '';
-            document.getElementById('expense-date').value = '';
-            document.getElementById('expense-submit-btn').textContent = '+ Add Expense';
-            document.getElementById('expense-edit-banner').style.display = 'none';
-            document.querySelectorAll('#expense-value-chips .chip-btn')[0].click();
-        }
-
-        window.deleteExpense = async (id) => {
-            expenses = expenses.filter(e => e.id !== id);
-            syncLocalStorage();
-            renderDashboard();
-
-            if (editingExpenseId === id) resetExpenseForm();
-
-            try {
-                await client.from('expenses').delete().eq('id', id);
-            } catch (e) {}
-            await loadData();
-        };
-
-        document.getElementById('expense-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const desc = document.getElementById('expense-desc');
-            const amt = document.getElementById('expense-amount');
-            const customDate = document.getElementById('expense-date').value.trim();
-
-            let targetDateObj = new Date();
-            if (customDate && customDate.length === 10) {
-                const [d, m, y] = customDate.split('.');
-                const parsed = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10), 12, 0, 0);
-                if (!isNaN(parsed.getTime())) targetDateObj = parsed;
-            }
-
-            const payload = {
-                description: desc.value.trim(),
-                amount: parseFloat(amt.value),
-                category: selectedCategory,
-                method: selectedExpenseMethod,
-                date: targetDateObj.getTime(),
-                is_essential: isEssentialExpense
-            };
-
-            if (editingExpenseId !== null) {
-                const index = expenses.findIndex(e => e.id === editingExpenseId);
-                if (index !== -1) expenses[index] = { ...payload, id: editingExpenseId };
-                syncLocalStorage();
-                renderDashboard();
-                try {
-                    await client.from('expenses').update(payload).eq('id', editingExpenseId);
-                } catch (e) {}
-            } else {
-                const newId = Date.now();
-                expenses.unshift({ ...payload, id: newId });
-                syncLocalStorage();
-                renderDashboard();
-                try {
-                    await client.from('expenses').insert([payload]);
-                } catch (err) {
-                    console.warn('Could not sync expense to remote server, saved locally:', err);
-                }
-            }
-
-            resetExpenseForm();
-            await loadData();
-        });
-
-        // 📥 Working CSV Export Button
-        document.getElementById('export-csv-btn').addEventListener('click', () => {
-            if (expenses.length === 0 && inflows.length === 0) {
-                alert('No data recorded yet to export.');
-                return;
-            }
-
-            let csvContent = "\uFEFFType,Date,Description/Source,Category,Payment Method,Amount (UZS)\r\n";
-
-            inflows.forEach(item => {
-                const d = new Date(Number(item.date || Date.now()));
-                const method = item.method || 'card';
-                csvContent += `INFLOW,${d.toLocaleDateString('ru-RU')},"${(item.source || '').replace(/"/g, '""')}",Income,${method},+${item.amount || 0}\r\n`;
-            });
-
-            expenses.forEach(item => {
-                const d = new Date(Number(item.date));
-                const method = item.method || 'card';
-                csvContent += `EXPENSE,${d.toLocaleDateString('ru-RU')},"${(item.description || '').replace(/"/g, '""')}",${item.category || 'other'},${method},-${item.amount || 0}\r\n`;
-            });
-
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Wallet_Expenses_${getLocalDateKey(new Date())}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        });
-
-        document.getElementById('clear-all-expenses').addEventListener('click', async () => {
-            if (confirm('Clear all accumulated expenses?')) {
-                expenses = [];
-                syncLocalStorage();
-                renderDashboard();
-                resetExpenseForm();
-                try {
-                    await client.from('expenses').delete().neq('id', 0);
-                } catch (e) {}
-                await loadData();
-            }
-        });
-
-        function renderDashboard() {
-            const filtered = getFilteredExpenses();
-            renderWallet(filtered);
-            renderExpenses(filtered);
-        }
-
-        // Run immediately from local storage cache, then check Supabase
-        renderDashboard();
-        loadData();
-        subscribeToRealtime();
-    </script>
-
-</body>
-
-</html>
+            const cardBalance = inflowCard -
