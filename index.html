@@ -452,6 +452,83 @@
 <body>
 
     <div class="wrapper">
+<!-- CARD 2: TOTAL EXPENSES TRACKER -->
+        <div class="card">
+            <div class="stats">
+                <span id="stat-period-label">All Time</span>
+                <span id="expense-count">0 items</span>
+            </div>
+            <div class="primary-val" id="expense-val">0 UZS</div>
+
+            <div class="method-breakdown" id="expense-method-breakdown">
+                <span>💵 Cash: <span class="method-val" id="spent-cash-val">0 UZS</span></span>
+                <span>•</span>
+                <span>💳 Card: <span class="method-val" id="spent-card-val">0 UZS</span></span>
+            </div>
+
+            <div class="sub-metric" id="expense-burn-rate" style="margin-top: 4px;">~0 UZS / day</div>
+
+            <div class="breakdown-bar" id="expense-breakdown-bar"></div>
+
+            <div class="filter-bar" id="expense-filters">
+                <button type="button" class="filter-btn" data-filter="week">This Week</button>
+                <button type="button" class="filter-btn" data-filter="month">This Month</button>
+                <button type="button" class="filter-btn" data-filter="30days">Last 30 Days</button>
+                <button type="button" class="filter-btn active" data-filter="all">All Time</button>
+            </div>
+
+            <div class="editing-mode-bar" id="expense-edit-banner">
+                <span>Editing Expense</span>
+                <button type="button" class="cancel-edit-btn" id="cancel-edit-btn">Cancel</button>
+            </div>
+
+            <form id="expense-form">
+                <div class="input-row">
+                    <input type="text" id="expense-desc" placeholder="Expense (e.g. Taxi, Lunch)" required>
+                    <input type="number" id="expense-amount" placeholder="UZS" min="1" required>
+                </div>
+                <div class="input-row">
+                    <input type="text" id="expense-date" inputmode="numeric" placeholder="Date: dd.mm.yyyy (optional for past days)" maxlength="10" autocomplete="off">
+                </div>
+
+                <div>
+                    <span class="chip-group-label">Paid with:</span>
+                    <div class="chips-container" id="expense-method-chips">
+                        <button type="button" class="chip-btn method-chip" data-method="cash">💵 Cash</button>
+                        <button type="button" class="chip-btn method-chip active" data-method="card">💳 Card</button>
+                    </div>
+                </div>
+
+                <div style="margin-top: 4px;">
+                    <span class="chip-group-label">Category:</span>
+                    <div class="chips-container" id="expense-category-chips">
+                        <button type="button" class="chip-btn active" data-cat="food">🍔 Food</button>
+                        <button type="button" class="chip-btn" data-cat="transport">🚕 Transport</button>
+                        <button type="button" class="chip-btn" data-cat="bills">📄 Bills</button>
+                        <button type="button" class="chip-btn" data-cat="leisure">🎬 Leisure</button>
+                        <button type="button" class="chip-btn" data-cat="shopping">🛍️ Shopping</button>
+                        <button type="button" class="chip-btn" data-cat="other">📦 Other</button>
+                    </div>
+                </div>
+
+                <div style="margin-top: 8px; margin-bottom: 8px;">
+    <span class="chip-group-label">Value:</span>
+    <div class="chips-container" id="expense-value-chips">
+        <button type="button" class="chip-btn active" data-essential="true">✅ Essential</button>
+        <button type="button" class="chip-btn" data-essential="false">📉 Non-essential (Muda)</button>
+    </div>
+</div>
+
+                <button type="submit" class="submit-btn" id="expense-submit-btn">+ Add Expense</button>
+            </form>
+
+            <div class="list-container" id="expense-container"></div>
+
+            <div class="card-actions">
+                <button type="button" class="action-btn export" id="export-csv-btn">📥 Export CSV</button>
+                <button type="button" class="action-btn" id="clear-all-expenses">Clear Expenses</button>
+            </div>
+        </div>
 
         <!-- CARD 1: WALLET & INFLOW TRACKER -->
         <div class="card">
@@ -479,7 +556,7 @@
                     <input type="number" id="inflow-amount" placeholder="+ UZS" min="1000" required>
                 </div>
                 <div class="input-row">
-                    <input type="text" id="inflow-date" placeholder="Date: dd.mm.yyyy (optional for past days)" maxlength="10" autocomplete="off">
+                    <input type="text" id="inflow-date" inputmode="numeric" placeholder="Date: dd.mm.yyyy (optional for past days)" maxlength="10" autocomplete="off">
                 </div>
 
                 <div>
@@ -497,75 +574,6 @@
 
             <div class="card-actions">
                 <button type="button" class="action-btn" id="clear-inflows-btn">Clear Inflows</button>
-            </div>
-        </div>
-
-        <!-- CARD 2: TOTAL EXPENSES TRACKER -->
-        <div class="card">
-            <div class="stats">
-                <span id="stat-period-label">All Time</span>
-                <span id="expense-count">0 items</span>
-            </div>
-            <div class="primary-val" id="expense-val">0 UZS</div>
-
-            <div class="method-breakdown" id="expense-method-breakdown">
-                <span>💵 Cash: <span class="method-val" id="spent-cash-val">0 UZS</span></span>
-                <span>•</span>
-                <span>💳 Card: <span class="method-val" id="spent-card-val">0 UZS</span></span>
-            </div>
-
-            <div class="sub-metric" id="expense-burn-rate" style="margin-top: 4px;">~0 UZS / day</div>
-
-            <div class="breakdown-bar" id="expense-breakdown-bar"></div>
-
-            <div class="filter-bar" id="expense-filters">
-                <button type="button" class="filter-btn" data-filter="week">This Week</button>
-                <button type="button" class="filter-btn" data-filter="month">This Month</button>
-                <button type="button" class="filter-btn active" data-filter="all">All Time</button>
-            </div>
-
-            <div class="editing-mode-bar" id="expense-edit-banner">
-                <span>Editing Expense</span>
-                <button type="button" class="cancel-edit-btn" id="cancel-edit-btn">Cancel</button>
-            </div>
-
-            <form id="expense-form">
-                <div class="input-row">
-                    <input type="text" id="expense-desc" placeholder="Expense (e.g. Taxi, Lunch)" required>
-                    <input type="number" id="expense-amount" placeholder="UZS" min="1" required>
-                </div>
-                <div class="input-row">
-                    <input type="text" id="expense-date" placeholder="Date: dd.mm.yyyy (optional for past days)" maxlength="10" autocomplete="off">
-                </div>
-
-                <div>
-                    <span class="chip-group-label">Paid with:</span>
-                    <div class="chips-container" id="expense-method-chips">
-                        <button type="button" class="chip-btn method-chip" data-method="cash">💵 Cash</button>
-                        <button type="button" class="chip-btn method-chip active" data-method="card">💳 Card</button>
-                    </div>
-                </div>
-
-                <div style="margin-top: 4px;">
-                    <span class="chip-group-label">Category:</span>
-                    <div class="chips-container" id="expense-category-chips">
-                        <button type="button" class="chip-btn active" data-cat="food">🍔 Food</button>
-                        <button type="button" class="chip-btn" data-cat="transport">🚕 Transport</button>
-                        <button type="button" class="chip-btn" data-cat="bills">📄 Bills</button>
-                        <button type="button" class="chip-btn" data-cat="leisure">🎬 Leisure</button>
-                        <button type="button" class="chip-btn" data-cat="shopping">🛍️ Shopping</button>
-                        <button type="button" class="chip-btn" data-cat="other">📦 Other</button>
-                    </div>
-                </div>
-
-                <button type="submit" class="submit-btn" id="expense-submit-btn">+ Add Expense</button>
-            </form>
-
-            <div class="list-container" id="expense-container"></div>
-
-            <div class="card-actions">
-                <button type="button" class="action-btn export" id="export-csv-btn">📥 Export CSV</button>
-                <button type="button" class="action-btn" id="clear-all-expenses">Clear Expenses</button>
             </div>
         </div>
 
@@ -664,6 +672,16 @@
             });
         }
 
+        let isEssentialExpense = true;
+
+document.querySelectorAll('#expense-value-chips .chip-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('#expense-value-chips .chip-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        isEssentialExpense = btn.dataset.essential === 'true';
+    });
+});
+
         document.querySelectorAll('#inflow-method-chips .chip-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('#inflow-method-chips .chip-btn').forEach(b => b.classList.remove('active'));
@@ -692,6 +710,7 @@
                 } else if (currentFilter === 'month') {
                     return itemDate.getMonth() === now.getMonth() && itemDate.getFullYear() === now.getFullYear();
                 }
+                else if (currentFilter === '30days') { ... }
                 return true;
             });
         }
@@ -917,8 +936,7 @@
             document.getElementById('spent-cash-val').textContent = `${formatNumber(spentCashFiltered)} UZS`;
             document.getElementById('spent-card-val').textContent = `${formatNumber(spentCardFiltered)} UZS`;
 
-            const labelMap = { week: 'This Week', month: 'This Month', all: 'All Time' };
-            document.getElementById('stat-period-label').textContent = labelMap[currentFilter];
+            const labelMap = { week: 'This Week', month: 'This Month', '30days': 'Last 30 Days', all: 'All Time' };
 
             const burnElem = document.getElementById('expense-burn-rate');
             if (totalSpent === 0) {
@@ -1063,6 +1081,7 @@
             document.getElementById('expense-date').value = '';
             document.getElementById('expense-submit-btn').textContent = '+ Add Expense';
             document.getElementById('expense-edit-banner').style.display = 'none';
+            document.querySelectorAll('#expense-value-chips .chip-btn')[0].click();
         }
 
         window.deleteExpense = async (id) => {
@@ -1097,6 +1116,7 @@
                 category: selectedCategory,
                 method: selectedExpenseMethod,
                 date: targetDateObj.getTime()
+                is_essential: isEssentialExpense
             };
 
             if (editingExpenseId !== null) {
